@@ -22,3 +22,4 @@ export const makeChoice = (sessionId, choice) =>
   api.post(`/adventure/${sessionId}/choice`, { choice });
 export const getSessions = () => api.get("/adventure/");
 export const getSession = (sessionId) => api.get(`/adventure/${sessionId}`);
+export const deleteSession = (sessionId) => api.delete(`/adventure/${sessionId}`);

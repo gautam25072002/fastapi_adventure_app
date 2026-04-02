@@ -34,98 +34,105 @@ export default function Game() {
   };
 
   if (loading) return (
-    <div style={styles.center}>
-      <p style={{ color: "#a78bfa" }}>Loading your adventure...</p>
+    <div className="min-h-screen bg-[#0f0f1a] flex items-center justify-center">
+      <p className="text-violet-400 animate-pulse">Loading your adventure...</p>
     </div>
   );
 
   if (!state) return (
-    <div style={styles.center}>
-      <p style={{ color: "#f87171" }}>Adventure not found.</p>
+    <div className="min-h-screen bg-[#0f0f1a] flex items-center justify-center">
+      <p className="text-red-400">Adventure not found.</p>
     </div>
   );
 
   return (
-    <div style={styles.container}>
-      {/* Header */}
-      <div style={styles.header}>
-        <button onClick={() => navigate("/dashboard")} style={styles.backBtn}>
+    <div className="min-h-screen bg-[#0f0f1a] text-white">
+
+      {/* Navbar */}
+      <div className="border-b border-[#2d2d44] px-6 py-4 flex items-center justify-between">
+        <button
+          onClick={() => navigate("/dashboard")}
+          className="text-gray-400 hover:text-white text-sm flex items-center gap-2 transition-colors"
+        >
           ← Dashboard
         </button>
-        <div style={styles.meta}>
-          <span style={styles.metaText}>
-            {state.session.character_name} the {state.session.character_class}
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-violet-400 capitalize font-medium">
+            {state.session.character_name}
           </span>
-          <span style={styles.metaDot}>·</span>
-          <span style={styles.metaText}>{state.session.genre}</span>
-          <span style={styles.metaDot}>·</span>
-          <span style={styles.metaText}>Turn {state.turn_number}</span>
+          <span className="text-gray-600">·</span>
+          <span className="text-gray-400 capitalize">{state.session.genre}</span>
+          <span className="text-gray-600">·</span>
+          <span className="text-gray-500">Turn {state.turn_number}</span>
         </div>
       </div>
 
-      {/* Story */}
-      <div style={styles.storyBox}>
-        <p style={styles.storyText}>{state.current_story}</p>
-      </div>
+      <div className="max-w-2xl mx-auto px-4 py-8 flex flex-col gap-6">
 
-      {/* Ended screen */}
-      {state.is_ended ? (
-        <div style={styles.endBox}>
-          <h2 style={styles.endTitle}>⚔️ Adventure Complete</h2>
-          <p style={styles.endSub}>
-            Your journey ended after {state.turn_number} turns.
-          </p>
-          <button
-            style={styles.button}
-            onClick={() => navigate("/dashboard")}
-          >
-            Start New Adventure
-          </button>
-        </div>
-      ) : (
-        /* Choices */
-        <div style={styles.choicesBox}>
-          <p style={styles.choiceLabel}>What do you do?</p>
-          <div style={styles.choices}>
-            {state.choices.map((choice, i) => (
-              <button
-                key={i}
-                style={styles.choiceBtn}
-                onClick={() => handleChoice(`Choice ${i + 1}`)}
-                disabled={choosing}
-              >
-                {choosing ? "..." : `${i + 1}. ${choice}`}
-              </button>
-            ))}
+        {/* Story box */}
+        <div className="bg-[#1a1a2e] rounded-2xl border border-[#2d2d44] p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-1.5 h-1.5 rounded-full bg-violet-400"></div>
+            <span className="text-violet-400 text-xs font-medium uppercase tracking-wide">
+              {state.is_ended ? "The End" : `Turn ${state.turn_number}`}
+            </span>
           </div>
-          {choosing && (
-            <p style={styles.generating}>✨ Generating next scene...</p>
-          )}
+          <p className="text-gray-200 leading-8 text-[15px]">
+            {state.current_story}
+          </p>
         </div>
-      )}
 
+        {/* Ended screen */}
+        {state.is_ended ? (
+          <div className="bg-[#1a1a2e] rounded-2xl border border-violet-500/30 p-8 text-center flex flex-col items-center gap-4">
+            <div className="text-5xl">🏆</div>
+            <h2 className="text-violet-400 text-xl font-semibold">
+              Adventure Complete
+            </h2>
+            <p className="text-gray-400 text-sm">
+              Your journey ended after {state.turn_number} turns.
+            </p>
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="bg-violet-700 hover:bg-violet-600 text-white font-medium rounded-xl px-8 py-3 text-sm transition-colors mt-2"
+            >
+              Start New Adventure
+            </button>
+          </div>
+        ) : (
+          /* Choices */
+          <div className="bg-[#1a1a2e] rounded-2xl border border-[#2d2d44] p-6">
+            <p className="text-gray-400 text-xs font-medium uppercase tracking-wide mb-4">
+              What do you do?
+            </p>
+            <div className="flex flex-col gap-3">
+              {state.choices.map((choice, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleChoice(`Choice ${i + 1}`)}
+                  disabled={choosing}
+                  className="flex items-start gap-3 bg-[#111827] hover:bg-[#1f2937] disabled:opacity-50 disabled:cursor-not-allowed border border-[#374151] hover:border-violet-500/50 rounded-xl px-4 py-3.5 text-left text-sm text-gray-300 hover:text-white transition-all"
+                >
+                  <span className="text-violet-500 font-semibold mt-0.5 shrink-0">
+                    {i + 1}.
+                  </span>
+                  <span>{choosing ? "Generating next scene..." : choice}</span>
+                </button>
+              ))}
+            </div>
+
+            {choosing && (
+              <div className="flex items-center justify-center gap-2 mt-5">
+                <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "300ms" }}></div>
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
       <div ref={bottomRef} />
     </div>
   );
 }
-
-const styles = {
-  container: { minHeight: "100vh", background: "#0f0f1a", color: "#fff", padding: "1.5rem", maxWidth: "720px", margin: "0 auto" },
-  center: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f0f1a" },
-  header: { display: "flex", alignItems: "center", gap: "1rem", marginBottom: "2rem", flexWrap: "wrap" },
-  backBtn: { background: "transparent", border: "1px solid #374151", color: "#9ca3af", padding: "0.4rem 0.9rem", borderRadius: "8px", cursor: "pointer", fontSize: "0.9rem" },
-  meta: { display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" },
-  metaText: { color: "#a78bfa", fontSize: "0.9rem", textTransform: "capitalize" },
-  metaDot: { color: "#4b5563" },
-  storyBox: { background: "#1a1a2e", borderRadius: "12px", padding: "1.75rem", marginBottom: "1.5rem", border: "1px solid #2d2d44", lineHeight: 1.8 },
-  storyText: { color: "#e5e7eb", margin: 0, fontSize: "1.05rem" },
-  choicesBox: { background: "#1a1a2e", borderRadius: "12px", padding: "1.5rem", border: "1px solid #2d2d44" },
-  choiceLabel: { color: "#9ca3af", marginBottom: "1rem", marginTop: 0, fontSize: "0.9rem" },
-  choices: { display: "flex", flexDirection: "column", gap: "0.75rem" },
-  choiceBtn: { padding: "0.9rem 1.25rem", borderRadius: "8px", background: "#111827", color: "#e5e7eb", border: "1px solid #374151", fontSize: "0.95rem", cursor: "pointer", textAlign: "left" },
-  generating: { color: "#a78bfa", marginTop: "1rem", textAlign: "center", fontSize: "0.9rem" },
-  endBox: { background: "#1a1a2e", borderRadius: "12px", padding: "2rem", border: "1px solid #6d28d9", textAlign: "center" },
-  endTitle: { color: "#a78bfa", marginTop: 0 },
-  endSub: { color: "#9ca3af", marginBottom: "1.5rem" },
-  button: { padding: "0.85rem 2rem", borderRadius: "8px", background: "#6d28d9", color: "#fff", border: "none", fontSize: "1rem", cursor: "pointer" }
-};

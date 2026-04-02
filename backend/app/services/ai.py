@@ -1,46 +1,58 @@
 from groq import Groq
 from app.config import settings
+import re
+import json
 
 client = Groq(api_key=settings.GROQ_API_KEY)
 MODEL = "groq/compound"
 
 SYSTEM_PROMPT = """You are a storytelling engine for a Choose Your Own Adventure game.
 
-You must ALWAYS follow this exact output format, every single time:
+You must ALWAYS respond in this exact JSON format, nothing else:
 
-[Your 100-150 word story here]
-
-Choice 1: [first option]
-Choice 2: [second option]
-Choice 3: [third option]
+{
+  "story": "your 80-100 word story here",
+  "is_ended": false
+}
 
 Rules:
-- Always end with exactly 3 choices in that exact format
-- Never skip the choices
-- Make choices meaningfully different
-- Keep the story consistent with previous events
+- "story" is 80-100 words of vivid narrative
+- "choices" is always exactly 3 short options UNLESS is_ended is true
+- "is_ended" is true only when the story reaches a natural conclusion or after turn 8
+- When "is_ended" is true, "story" is a satisfying conclusion and "choices" is an empty array []
+- Never include anything outside the JSON
 - Never mention you are an AI"""
 
 
-def parse_choices(story_text: str) -> tuple[str, list[str]]:
-    import re
-    choices = []
-    story_lines = []
+def call_ai(messages: list) -> dict:
+    """Single API call that returns story, choices and end state together."""
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=messages,
+        temperature=0.8,
+        max_tokens=1024
+    )
 
-    for line in story_text.strip().split("\n"):
-        match = re.match(r'Choice\s*\d+:\s*(.+)', line.strip(), re.IGNORECASE)
-        if match:
-            choices.append(match.group(1).strip())
-        else:
-            story_lines.append(line)
+    raw = response.choices[0].message.content.strip()
+    print("=== RAW RESPONSE ===")
+    print(raw)
+    print("====================")
 
-    story = "\n".join(story_lines).strip()
+    # Strip markdown code blocks if model wraps in ```json
+    raw = re.sub(r'^```json\s*', '', raw)
+    raw = re.sub(r'^```\s*', '', raw)
+    raw = re.sub(r'\s*```$', '', raw)
 
-    print("=== PARSED CHOICES ===")
-    print(choices)
-    print("======================")
-
-    return story, choices
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        # Fallback if JSON parsing fails
+        print("=== JSON PARSE FAILED, using fallback ===")
+        return {
+            "story": raw,
+            "choices": ["Continue forward", "Look around carefully", "Turn back"],
+            "is_ended": False
+        }
 
 
 def generate_opening(
@@ -48,30 +60,23 @@ def generate_opening(
     setting: str,
     character_name: str,
     character_class: str
-) -> tuple[str, list[str]]:
+) -> tuple[str, list[str], bool]:
 
-    prompt = f"""Genre: {genre}
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {
+            "role": "user",
+            "content": f"""Genre: {genre}
 Setting: {setting}
 Character: {character_name}, a {character_class}
 
-Begin the adventure. Set the scene and introduce an immediate challenge.
-Remember to end with Choice 1, Choice 2, Choice 3."""
+Begin the adventure. This is turn 1. is_ended must be false.
+Respond only in the required JSON format."""
+        }
+    ]
 
-    response = client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.8,
-        max_tokens=1024
-    )
-
-    raw = response.choices[0].message.content
-    print("=== RAW RESPONSE ===")
-    print(raw)
-    print("====================")
-    return parse_choices(raw)
+    result = call_ai(messages)
+    return result["story"], result.get("choices", []), result.get("is_ended", False)
 
 
 def generate_next_scene(
@@ -80,8 +85,9 @@ def generate_next_scene(
     character_name: str,
     character_class: str,
     history: list[dict],
-    latest_choice: str
-) -> tuple[str, list[str]]:
+    latest_choice: str,
+    turn_number: int
+) -> tuple[str, list[str], bool]:
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
@@ -94,78 +100,21 @@ Character: {character_name}, a {character_class}
 Begin the adventure."""
     })
 
-    # Full history as alternating messages
+    # Full conversation history
     for turn in history:
-        messages.append({"role": "assistant", "content": turn["story"]})
+        messages.append({"role": "assistant", "content": json.dumps({
+            "story": turn["story"],
+            "choices": [],
+            "is_ended": False
+        })})
         messages.append({"role": "user", "content": f"I choose: {turn['choice']}"})
 
     # Current choice
+    end_hint = "Consider ending the story naturally." if turn_number >= 7 else "is_ended must be false."
     messages.append({
         "role": "user",
-        "content": f"I choose: {latest_choice}. Continue the story and end with Choice 1, Choice 2, Choice 3."
+        "content": f"I choose: {latest_choice}. This is turn {turn_number}. {end_hint} Respond only in the required JSON format."
     })
 
-    response = client.chat.completions.create(
-        model=MODEL,
-        messages=messages,
-        temperature=0.8,
-        max_tokens=1024
-    )
-
-    raw = response.choices[0].message.content
-    print("=== RAW RESPONSE ===")
-    print(raw)
-    print("====================")
-    return parse_choices(raw)
-
-
-def should_story_end(story_text: str, turn_number: int) -> bool:
-    if turn_number >= 10:
-        return True
-
-    response = client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a story progression judge. Answer only YES or NO, nothing else."
-            },
-            {
-                "role": "user",
-                "content": f"""This is turn {turn_number} of a Choose Your Own Adventure game.
-
-{story_text}
-
-Has this story reached a natural conclusion where it would make sense to end? Answer only YES or NO."""
-            }
-        ],
-        temperature=0,
-        max_tokens=5
-    )
-
-    answer = response.choices[0].message.content.strip().upper()
-    print(f"=== END CHECK (turn {turn_number}): {answer} ===")
-    return answer.startswith("YES")
-
-
-def generate_ending(story_text: str, character_name: str) -> str:
-    response = client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": "You write satisfying conclusions to adventure stories. Write only the conclusion paragraph, no choices."
-            },
-            {
-                "role": "user",
-                "content": f"""Write a satisfying 80-100 word conclusion for {character_name}'s adventure.
-This was the final scene:
-
-{story_text}"""
-            }
-        ],
-        temperature=0.7,
-        max_tokens=512
-    )
-
-    return response.choices[0].message.content.strip()
+    result = call_ai(messages)
+    return result["story"], result.get("choices", []), result.get("is_ended", False)

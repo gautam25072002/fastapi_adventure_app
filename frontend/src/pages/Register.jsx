@@ -23,58 +23,82 @@ export default function Register() {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>⚔️ AI Adventure</h1>
-        <p style={styles.subtitle}>Create your account</p>
+    <div className="min-h-screen bg-[#0f0f1a] flex items-center justify-center px-4">
+      <div className="w-full max-w-sm bg-[#1a1a2e] rounded-2xl border border-[#2d2d44] p-8">
 
-        {error && <p style={styles.error}>{error}</p>}
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="text-4xl mb-3">⚔️</div>
+          <h1 className="text-2xl font-semibold text-violet-400">AI Adventure</h1>
+          <p className="text-gray-500 text-sm mt-1">Create your account</p>
+        </div>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <input
-            style={styles.input}
-            placeholder="Username"
-            value={form.username}
-            onChange={(e) => setForm({ ...form, username: e.target.value })}
-            required
-          />
-          <input
-            style={styles.input}
-            type="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            required
-          />
-          <input
-            style={styles.input}
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            required
-          />
-          <button style={styles.button} type="submit" disabled={loading}>
-            {loading ? "Creating account..." : "Register"}
+        {/* Error */}
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-lg px-4 py-3 mb-6">
+            {error}
+          </div>
+        )}
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-gray-400 text-xs font-medium uppercase tracking-wide">
+              Username
+            </label>
+            <input
+              placeholder="Aryan"
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+              required
+              className="bg-[#111827] border border-[#374151] text-white placeholder-gray-600 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-violet-500 transition-colors"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-gray-400 text-xs font-medium uppercase tracking-wide">
+              Email
+            </label>
+            <input
+              type="email"
+              placeholder="you@email.com"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
+              className="bg-[#111827] border border-[#374151] text-white placeholder-gray-600 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-violet-500 transition-colors"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-gray-400 text-xs font-medium uppercase tracking-wide">
+              Password
+            </label>
+            <input
+              type="password"
+              placeholder="••••••••"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              required
+              className="bg-[#111827] border border-[#374151] text-white placeholder-gray-600 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-violet-500 transition-colors"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-violet-700 hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg py-3 text-sm transition-colors mt-1"
+          >
+            {loading ? "Creating account..." : "Create Account"}
           </button>
         </form>
 
-        <p style={styles.link}>
-          Already have an account? <Link to="/login">Login here</Link>
+        <p className="text-center text-gray-500 text-sm mt-6">
+          Already have an account?{" "}
+          <Link to="/login" className="text-violet-400 hover:text-violet-300 transition-colors">
+            Login here
+          </Link>
         </p>
       </div>
     </div>
   );
 }
-
-const styles = {
-  container: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f0f1a" },
-  card: { background: "#1a1a2e", padding: "2rem", borderRadius: "12px", width: "360px", boxShadow: "0 0 30px rgba(99,102,241,0.2)" },
-  title: { color: "#a78bfa", textAlign: "center", marginBottom: "0.25rem" },
-  subtitle: { color: "#6b7280", textAlign: "center", marginBottom: "1.5rem", fontSize: "0.9rem" },
-  form: { display: "flex", flexDirection: "column", gap: "0.75rem" },
-  input: { padding: "0.75rem", borderRadius: "8px", border: "1px solid #374151", background: "#111827", color: "#fff", fontSize: "1rem" },
-  button: { padding: "0.75rem", borderRadius: "8px", background: "#6d28d9", color: "#fff", border: "none", fontSize: "1rem", cursor: "pointer" },
-  error: { color: "#f87171", textAlign: "center", marginBottom: "1rem" },
-  link: { color: "#6b7280", textAlign: "center", marginTop: "1rem", fontSize: "0.9rem" }
-};

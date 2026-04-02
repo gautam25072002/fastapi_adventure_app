@@ -10,7 +10,7 @@ from app.schemas.adventure import (
     StartAdventureRequest, ChoiceRequest,
     AdventureSessionResponse, AdventureStateResponse
 )
-from app.services.ai import generate_opening, generate_next_scene, should_story_end, generate_ending
+from app.services.ai import generate_opening, generate_next_scene
 from typing import List
 
 router = APIRouter(prefix="/adventure", tags=["Adventure"])
@@ -22,7 +22,7 @@ def start_adventure(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    story_text, choices = generate_opening(
+    story_text, choices, is_ended = generate_opening(
         payload.genre,
         payload.setting,
         payload.character_name,
@@ -55,7 +55,7 @@ def start_adventure(
         current_story=story_text,
         choices=choices,
         turn_number=1,
-        is_ended=False
+        is_ended=is_ended
     )
 
 
@@ -88,45 +88,23 @@ def make_choice(
         for node in nodes[:-1]
     ]
 
-    story_text, choices = generate_next_scene(
+    next_turn = latest_node.sequence_number + 1
+
+    story_text, choices, is_ended = generate_next_scene(
         session.genre,
         session.setting,
         session.character_name,
         session.character_class,
         history,
-        payload.choice
+        payload.choice,
+        next_turn
     )
 
-    next_turn = latest_node.sequence_number + 1
-
-    # Check if story should end
-    if should_story_end(story_text, next_turn):
-        ending_text = generate_ending(story_text, session.character_name)
-
-        # Mark session as completed
+    # Mark session completed if story ended
+    if is_ended:
         session.status = "completed"
         session.ended_at = datetime.now(timezone.utc)
 
-        final_node = StoryNode(
-            session_id=session.id,
-            sequence_number=next_turn,
-            story_text=ending_text,
-            choices=[],
-            choice_made=None
-        )
-        db.add(final_node)
-        db.commit()
-        db.refresh(session)
-
-        return AdventureStateResponse(
-            session=session,
-            current_story=ending_text,
-            choices=[],
-            turn_number=next_turn,
-            is_ended=True
-        )
-
-    # Story continues
     new_node = StoryNode(
         session_id=session.id,
         sequence_number=next_turn,
@@ -143,7 +121,7 @@ def make_choice(
         current_story=story_text,
         choices=choices,
         turn_number=next_turn,
-        is_ended=False
+        is_ended=is_ended
     )
 
 
@@ -189,3 +167,25 @@ def get_session(
         turn_number=latest.sequence_number,
         is_ended=is_ended
     )
+
+
+@router.delete("/{session_id}")
+def delete_session(
+    session_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    session = db.query(AdventureSession).filter(
+        AdventureSession.id == session_id,
+        AdventureSession.user_id == current_user.id
+    ).first()
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Delete all story nodes first then the session
+    db.query(StoryNode).filter(StoryNode.session_id == session_id).delete()
+    db.delete(session)
+    db.commit()
+
+    return {"message": "Adventure deleted"}
